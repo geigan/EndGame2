@@ -1,0 +1,12 @@
+body {
+	background-image: url("../html/images/sign-in-bg.png");
+	background-repeat: no-repeat;
+	background-size: 100% 100%;
+}
+
+h1 {
+	color: white;
+	font-family: Impact, Charcoal, sans-serif;
+	font-size: 80px;
+    text-shadow: -1px 0 black, 0 5px black, 5px 0 black, 0 -5px black;
+}

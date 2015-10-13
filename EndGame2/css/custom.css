@@ -1,0 +1,7 @@
+body{
+	margin:10px;
+	padding: 0px;
+}
+canvas:hover{
+	cursor: url("../html/images/shotcursor.ico") 16 16, auto;
+}

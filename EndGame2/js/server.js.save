@@ -1,0 +1,133 @@
+
+var clients = [];
+var app = require('http').createServer()
+, fs = require('fs')
+, io = require('socket.io').listen(app);
+
+var usernames = [{}];
+var rooms = [{'room':'Lobby','pop': 0, 'clients' : []}];
+var roomsavailable = [];
+
+app.listen(8000);
+io.sockets.on('connection', function(socket) {
+	console.log("socket connected");	
+
+  socket.on('adduser', function (username){
+        socket.username = username;
+        socket.room = 'Lobby';   
+        var newJSON  = {"username":username, "socketID" : socket.id, "peeking":"true"};      
+        console.log(newJSON);
+	usernames.push(newJSON);
+        socket.join('Lobby'); 
+        socket.emit('updateRooms',roomsavailable);         
+  	console.log("Added User: "+username);  
+  });
+
+  socket.on('create', function (username){
+		socket.leave(socket.room);
+		var newJSON = {'room':username,'pop':1,'clients' : [username]};
+  		rooms.push(newJSON);
+  		roomsavailable.push(username);
+  		socket.broadcast.to('Lobby').emit('updateRooms', roomsavailable);
+		socket.disconnect();
+		console.log("Created Room: "+username);
+  });
+
+/* proof of concept for emitting to socketID stored in usernames 
+socket.on('test',function (data) {
+	console.log(data['username'] + " : " + data['room']);
+	for(var i = 0;i<usernames.length;i++){
+		if(usernames[i]['username']==data['username']){
+			var receiver = usernames[i]['socketID'];
+			console.log(socket);
+		}
+	}
+	if(io.sockets.connected[receiver]){
+		io.sockets.connected[receiver].emit('test', 'testing');
+	}
+  }); */
+
+  socket.on('leave',function (username){
+		console.log(username+" left the Lobby");
+		socket.leave(socket.room);
+		socket.disconnect();
+  });
+
+  socket.on('join', function (data){
+		console.log(data['username']+ " joining room...");
+  		socket.username = data['username'];
+		socket.room = data['room'];
+		socket.join(data['room']);
+		var numClients;
+		for(var i = 0;i<usernames.length;i++){
+                	if(usernames[i]['username']==data['username']){
+                        	var receiver = usernames[i]['socketID'];
+	                        console.log(socket);
+        	        }
+	    for(var i = 0;i<usernames.length;i++){
+                if(usernames[i]['username']==data['username']){
+                        var receiver = usernames[i]['socketID'];
+                        console.log(socket);
+                }
+        }
+    }
+
+
+
+  		if(numClients>1){
+  			delete roomsavailable[roomsavailable.indexOf(data['room'])];
+  			socket.broadcast.to('Lobby').emit('updateRooms', roomsavailable);
+  			socket.broadcast.to(data['room']).emit('gameStart', socket.username);
+  		}
+		console.log(data['username']+ " joined " + data['room']);
+  });
+
+//may need to reconfigure peeking and shoot for socket.io 1.0
+  socket.on('peeking', function (data){
+	console.log(data['username'] + " peeking...")
+        var roomIndex;
+        for(var i = 0; i<usernames.length;i++){
+          if(usernames[i]['username']==username){
+            roomIndex = i;
+          }
+        }
+        usernames[roomIndex]['peeking'] = peeking;
+
+	var roomUsers = io.sockets.adapter.rooms[socket.room];
+        roomUsers.foreach(function (user){
+          if(user.username!=username){
+            socket.to(user).emit('peeking', peeking);
+          }
+        }); 
+	console.log(username + " peeking changed to "+peeking);
+  });
+
+  socket.on('shoot', function (username){
+	console.log(username+ "firing...");
+        var roomUsers = io.sockets.clients(socket.room);
+        var otherUser;
+        var roomIndex;
+        roomUsers.foreach(function (user){
+          if(user.username!=username){
+            for(var i = 0; i<usernames.length;i++){
+              if(usernames[i]['username']==user.username){
+                roomIndex = i;
+              }
+            }
+            if(usernames[roomIndex]['peeking'] == true){
+              socket.broadcast.to(socket.room).emit('endGame', username);
+            }
+          }
+        });
+	console.log(username + " fired.");
+  });
+
+  socket.on('disconnect', function (){
+  console.log("user disconnected from room");  
+  if(socket.room!='Lobby'){
+      socket.broadcast.to(socket.room).emit('endGame', 'disconnected');
+    }
+  });
+
+
+ });
